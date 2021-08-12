@@ -1,0 +1,90 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2577
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \
+For this version, we took all intervals that are in goods2 and choose the following hyper parameters.\
+\
+params_grid = \{\
+                'max_depth':[5],\
+                'learning_rate':[0.1],\
+                #\'92subsample': [1,0.7,0.4,0.1] ,\
+                #'reg_lambda':[ 0.1, 1, 10],\
+                #\'92min_child_weight':[1,5,10]\
+            \}\
+\
+\
+\
+We did scale \'82r\'91 with the factor 1e9 any parameter here.\
+We did scale \'82D^2/(2g1)\'91 with the factor 1e9 any parameter here.\
+\
+Additionally, we added columns to mleres:\
+17: D^2/(2*g1)\
+18: (q+r*t_N)/g1\
+19: RoCof with longer timespan\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+# first check that goods2 does not start with hour 1\
+goods2\
+mleres\
+\
+#### take just intervals with control on: #####\
+j=1\
+con_temp=Array\{Int64,1\}(undef,length(goods2))\
+for i in goods2\
+    if mleres[i,3]>0\
+        con_temp[j]=i\
+        global j+=1\
+    end\
+end\
+con=con_temp[1:j-1]\
+\
+RoCoFLong=Array\{Float64,1\}(undef,8760)\
+smoothfsLong=Array\{Float64,1\}(undef,401)\
+save_mleres=Array\{Float64,2\}(undef,8760,19) #17: D^2/(2*g1),    18: (q+r*t_N)/g1,    19: RoCof with longer timespan\
+for h in 1:8760\
+    if h in con\
+        save_mleres[h,1:16]=mleres[h,:]\
+        save_mleres[h,17]=(mleres[h,7]^2)/(2*mleres[h,3])\
+        save_mleres[h,18]=(mleres[h,5]+mleres[h,6]*mleres[h,2])/mleres[h,3]\
+        for i in -200:200\
+            global smoothfsLong[i+201]=sum(fs[(((h-1)*3600)+(i-50)):(((h-1)*3600)+(i+50))])/100\
+        end\
+        RoCoFLong[h]=Polynomials.fit(1:61,smoothfsLong[180:240],1)[1]\
+        save_mleres[h,19]=RoCoFLong[h]\
+    else\
+        for j in 1:19\
+            save_mleres[h,j]=NaN\
+        end\
+    end\
+end\
+save_mleres[:,6]=save_mleres[:,6].*1e09\
+\
+##### check #####\
+mleres\
+save_mleres\
+Plots.plot(goods2[1:80],save_mleres[goods2[1:80],2])\
+Plots.plot(con[1:80],save_mleres[con[1:80],2])\
+\
+Plots.plot(mod.(1:8760,24),save_mleres[:,17],ylims=(0,0.017),seriestype=:scatter,markerstrokewidth = 0,alpha=0.1)\
+\
+##### save #####\
+Tables.table(save_mleres)\
+lkj\
+#writedlm( "/Users/raphaelbiertz/Documents/masterarbeit/coding/ML/prepared_data/mle/mleres18_re9.csv",save_mleres)\
+CSV.write("/Users/raphaelbiertz/Documents/masterarbeit/coding/ML/prepared_data/mle/mleres18_re9ADD.csv",Tables.table(save_mleres))\
+}

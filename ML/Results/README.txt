@@ -1,0 +1,1 @@
+Die Conda Environment "boost" beinhaltet alle so packeges, dass Johannes' gradient tree boosting auf dem m1 (ARM64) Prozessor läuft.
